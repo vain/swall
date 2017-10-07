@@ -1,0 +1,60 @@
+#!/bin/sh
+
+compose()
+{
+    mode=$1
+    shift
+
+    tmpdir=$(mktemp -d)
+    trap 'rm -Rf "$tmpdir"' EXIT
+
+    convert canvas:black -resize "!$rootsize" "$tmpdir"/canvas.ppm
+
+    echo "$monitors" |
+    while read _ w h x y
+    do
+        [ -z "$1" ] && { echo 'Error: Not enough images' >&2; return 1; }
+
+        convert -background black -gravity center \
+            -resize "^${w}x${h}" -extent "${w}x${h}" "$1" "$tmpdir"/pic.ppm
+
+        convert "$tmpdir"/canvas.ppm "$tmpdir"/pic.ppm \
+            -geometry +"$x"+"$y" -composite "$tmpdir"/canvas2.ppm
+
+        mv "$tmpdir"/canvas{2,}.ppm
+        rm "$tmpdir"/pic.ppm
+
+        [ "$mode" = spread ] && shift
+    done || return 1
+
+    2ff_fast "$tmpdir"/canvas.ppm | rootfeld
+}
+
+tile()
+{
+    2ff_fast "$1" | rootfeld
+}
+
+
+[ -z "$1" ] && { echo 'Usage: swall <wallpaper>...' >&2; exit 1; }
+
+export PATH="$PATH:$(dirname "$0")"
+
+monitors=$(xdpyinfo -ext XINERAMA | sed '/^  head #/!d; s///; s/[:x@,]/ /g' |
+           sort -k4n)
+num_monis=$(echo "$monitors" | wc -l)
+rootsize=$(xdpyinfo -ext XINERAMA | sed -rn 's/^  dimensions: +([0-9x]+) .*/\1/p')
+
+case $1 in
+    clone|single)
+        shift
+        compose single "$@"
+        ;;
+    spread)
+        shift
+        compose spread "$@"
+        ;;
+    tile)
+        tile "$2"
+        ;;
+esac
