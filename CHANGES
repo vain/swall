@@ -1,0 +1,5 @@
+Release history for swall
+
+next
+  - Initial release.
+  - Set root wallpaper and handle the three most common cases.
