@@ -103,6 +103,7 @@ compose(char **paths, size_t num_paths, bool single)
     size_t i, path_i;
     double source_aspect, target_aspect;
     Imlib_Image image, canvas;
+    bool larger;
 
     canvas = imlib_create_image(root_w, root_h);
     if (canvas == NULL)
@@ -141,14 +142,31 @@ compose(char **paths, size_t num_paths, bool single)
             src_w = orig_w;
             src_h = orig_h;
         }
-        else if ((unsigned int)orig_w >= monitors[i].width &&
-                 (unsigned int)orig_h >= monitors[i].height)
+        else
         {
+            /* Fill this monitor as best as you can.
+             *
+             * For larger images, crop width or height and then resize
+             * to achieve the monitor's aspect ratio.
+             *
+             * Smaller images will be increased in size and black bars
+             * will be introduced to achieve the monitor's aspect ratio.
+             * This won't look pretty but it will look okay for images
+             * that are just slightly smaller than the monitor. */
+
+            if ((unsigned int)orig_w >= monitors[i].width &&
+                (unsigned int)orig_h >= monitors[i].height)
+                larger = true;
+            else
+                larger = false;
+
             source_aspect = (double)orig_w / orig_h;
             target_aspect = (double)monitors[i].width / monitors[i].height;
-            if (source_aspect > target_aspect)
+
+            if ((larger && source_aspect > target_aspect) ||
+                (!larger && source_aspect < target_aspect))
             {
-                printf(__NAME__": Cropping width of '%s' for monitor %zu\n",
+                printf(__NAME__": Using full height of '%s' for monitor %zu\n",
                        paths[path_i], i);
 
                 src_y = 0;
@@ -159,7 +177,7 @@ compose(char **paths, size_t num_paths, bool single)
             }
             else
             {
-                printf(__NAME__": Cropping height of '%s' for monitor %zu\n",
+                printf(__NAME__": Using full width of '%s' for monitor %zu\n",
                        paths[path_i], i);
 
                 src_x = 0;
@@ -168,19 +186,6 @@ compose(char **paths, size_t num_paths, bool single)
                 src_h = orig_w / target_aspect;
                 src_y = (orig_h - src_h) * 0.5;
             }
-        }
-        else
-        {
-            /* Image is smaller than this monitor, at least in one
-             * dimension. Whatever we do, it won't look good. Just scale
-             * it to the monitor's size.
-             *
-             * When in compose mode, you should use source material
-             * which is at least as large as each of your monitors. */
-            printf(__NAME__": Upsizing '%s' for monitor %zu\n", paths[path_i], i);
-            src_x = src_y = 0;
-            src_w = orig_w;
-            src_h = orig_h;
         }
 
         imlib_context_set_image(canvas);
