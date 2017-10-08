@@ -101,7 +101,7 @@ compose(char **paths, size_t num_paths, bool single)
 {
     int orig_w, orig_h, src_x, src_y, src_w, src_h;
     size_t i, path_i;
-    double target_aspect;
+    double source_aspect, target_aspect;
     Imlib_Image image, canvas;
 
     canvas = imlib_create_image(root_w, root_h);
@@ -130,11 +130,44 @@ compose(char **paths, size_t num_paths, bool single)
         orig_w = imlib_image_get_width();
         orig_h = imlib_image_get_height();
 
-        if ((unsigned int)orig_w > monitors[i].width &&
-            (unsigned int)orig_h > monitors[i].height)
+        if ((unsigned int)orig_w == monitors[i].width &&
+            (unsigned int)orig_h == monitors[i].height)
         {
+            printf(__NAME__": Exact size match of '%s' for monitor %zu\n",
+                   paths[path_i], i);
+
+            src_x = 0;
+            src_y = 0;
+            src_w = orig_w;
+            src_h = orig_h;
+        }
+        else if ((unsigned int)orig_w >= monitors[i].width &&
+                 (unsigned int)orig_h >= monitors[i].height)
+        {
+            source_aspect = (double)orig_w / orig_h;
             target_aspect = (double)monitors[i].width / monitors[i].height;
-            /* XXX Time for some work on paper */
+            if (source_aspect > target_aspect)
+            {
+                printf(__NAME__": Cropping width of '%s' for monitor %zu\n",
+                       paths[path_i], i);
+
+                src_y = 0;
+                src_h = orig_h;
+
+                src_w = orig_h * target_aspect;
+                src_x = (orig_w - src_w) * 0.5;
+            }
+            else
+            {
+                printf(__NAME__": Cropping height of '%s' for monitor %zu\n",
+                       paths[path_i], i);
+
+                src_x = 0;
+                src_w = orig_w;
+
+                src_h = orig_w / target_aspect;
+                src_y = (orig_h - src_h) * 0.5;
+            }
         }
         else
         {
@@ -144,6 +177,7 @@ compose(char **paths, size_t num_paths, bool single)
              *
              * When in compose mode, you should use source material
              * which is at least as large as each of your monitors. */
+            printf(__NAME__": Upsizing '%s' for monitor %zu\n", paths[path_i], i);
             src_x = src_y = 0;
             src_w = orig_w;
             src_h = orig_h;
@@ -197,7 +231,10 @@ tile(char *path)
         }
 
         if (use_as_tile)
+        {
+            printf(__NAME__": Tiling '%s'\n", path);
             use_image_as_wallpaper(image);
+        }
         imlib_free_image();
     }
     return use_as_tile;
