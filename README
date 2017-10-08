@@ -31,6 +31,10 @@ There is no "install" target.
 Running
 -------
 
+swall assumes that it can directly alter the root window. In other
+words, you're not supposed to use a separate program that manages a
+"desktop window".
+
 The program handles three common cases:
 
     $ swall tile.gif
