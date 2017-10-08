@@ -97,7 +97,7 @@ use_image_as_wallpaper(Imlib_Image image)
 }
 
 void
-compose(char **paths, size_t num_paths, bool single)
+compose(char **paths, bool single)
 {
     int orig_w, orig_h, src_x, src_y, src_w, src_h;
     size_t i, path_i;
@@ -114,7 +114,7 @@ compose(char **paths, size_t num_paths, bool single)
 
     for (i = 0, path_i = 0; i < num_mons; i++)
     {
-        if (path_i >= num_paths)
+        if (paths[path_i] == NULL)
         {
             fprintf(stderr, __NAME__": Not enough images\n");
             goto errout;
@@ -276,10 +276,10 @@ main(int argc, char **argv)
     if (argc == 2)
     {
         if (!tile(argv[1]))
-            compose(++argv, argc - 1, true);
+            compose(++argv, true);
     }
     else
-        compose(++argv, argc - 1, false);
+        compose(++argv, false);
 
     XFlush(dpy);
     XCloseDisplay(dpy);
