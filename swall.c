@@ -226,10 +226,19 @@ tile(char *path)
     else
     {
         imlib_context_set_image(image);
+
+        /* Try to find out if this image is probably suitable as a
+         * wallpaper tile. It is considered NOT suitable if it exceeds
+         * 70% of the size of the smallest monitor (x and y direction).
+         *
+         * A nice tile should be a rather small image, probably only
+         * about 10% the size of your monitor, tops. There are some
+         * larger tiles, though. 70% is a very high value, actually,
+         * maybe it should be reduced to, say, 30% to 50%. */
         for (i = 0; use_as_tile && i < num_mons; i++)
         {
-            if ((unsigned int)imlib_image_get_width() > monitors[i].width ||
-                (unsigned int)imlib_image_get_height() > monitors[i].height)
+            if ((unsigned int)imlib_image_get_width() > 0.7 * monitors[i].width ||
+                (unsigned int)imlib_image_get_height() > 0.7 * monitors[i].height)
             {
                 use_as_tile = false;
             }
