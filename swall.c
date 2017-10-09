@@ -6,7 +6,6 @@
 #include <X11/Xlib.h>
 
 #define __NAME__ "swall"
-#define MAX_MONS 16
 
 struct Monitor
 {
@@ -18,7 +17,7 @@ Display *dpy;
 Window root;
 int screen;
 unsigned int root_w, root_h;
-struct Monitor monitors[MAX_MONS] = {0};
+struct Monitor *monitors = NULL;
 size_t num_mons = 0;
 
 int
@@ -43,31 +42,36 @@ monitors_compare(const void *a, const void *b)
 bool
 read_monitors(void)
 {
-    XRRCrtcInfo *ci;
-    XRRScreenResources *sr;
-    int c;
+    XRRMonitorInfo *moninf;
+    int nmon;
+    size_t i;
 
-    sr = XRRGetScreenResources(dpy, root);
-    if (sr->ncrtc <= 0)
+    moninf = XRRGetMonitors(dpy, root, True, &nmon);
+    if (nmon <= 0)
     {
         fprintf(stderr, __NAME__": No XRandR screens found\n");
         return false;
     }
 
-    num_mons = 0;
-    for (c = 0; c < sr->ncrtc && num_mons < MAX_MONS; c++)
+    /* Copy result to our own array because I'm not sure if we can work
+     * freely on the array returned by the lib. */
+    num_mons = nmon;
+    monitors = calloc(num_mons, sizeof (struct Monitor));
+    if (monitors == NULL)
     {
-        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
-        if (ci == NULL || ci->noutput == 0 || ci->mode == None)
-            continue;
-
-        monitors[num_mons].x = ci->x;
-        monitors[num_mons].y = ci->y;
-        monitors[num_mons].width = ci->width;
-        monitors[num_mons].height = ci->height;
-
-        num_mons++;
+        fprintf(stderr, __NAME__": Cannot allocate memory for 'monitors': ");
+        perror(NULL);
+        return false;
     }
+    for (i = 0; i < num_mons; i++)
+    {
+        monitors[i].x = moninf[i].x;
+        monitors[i].y = moninf[i].y;
+        monitors[i].width = moninf[i].width;
+        monitors[i].height = moninf[i].height;
+    }
+    XRRFreeMonitors(moninf);
+
     qsort(monitors, num_mons, sizeof (struct Monitor), monitors_compare);
 
     return true;
