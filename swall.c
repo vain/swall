@@ -121,14 +121,14 @@ compose(char **paths, bool single)
         if (paths[path_i] == NULL)
         {
             fprintf(stderr, __NAME__": Not enough images\n");
-            goto errout;
+            goto free_canvas_and_leave;
         }
 
         image = imlib_load_image(paths[path_i]);
         if (image == NULL)
         {
             fprintf(stderr, __NAME__": Cannot load image '%s'\n", paths[path_i]);
-            goto errout;
+            goto free_canvas_and_leave;
         }
 
         imlib_context_set_image(image);
@@ -209,7 +209,7 @@ compose(char **paths, bool single)
 
     use_image_as_wallpaper(canvas);
 
-errout:
+free_canvas_and_leave:
     imlib_context_set_image(canvas);
     imlib_free_image_and_decache();
 }
