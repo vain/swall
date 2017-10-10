@@ -1,5 +1,5 @@
 Release history for swall
 
-next
+v17.10  2017-10-10
   - Initial release.
   - Set root wallpaper and handle the three most common cases.
