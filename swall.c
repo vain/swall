@@ -40,35 +40,86 @@ monitors_compare(const void *a, const void *b)
 }
 
 bool
+read_monitors_is_duplicate(XRRMonitorInfo *allmons, int testmon, bool *chosen,
+                           size_t nmon)
+{
+    size_t i;
+
+    for (i = 0; i < nmon; i++)
+    {
+        if (chosen[i])
+        {
+            if (allmons[i].x == allmons[testmon].x &&
+                allmons[i].y == allmons[testmon].y &&
+                allmons[i].width == allmons[testmon].width &&
+                allmons[i].height == allmons[testmon].height)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool
 read_monitors(void)
 {
     XRRMonitorInfo *moninf;
     int nmon;
-    size_t i;
+    size_t i, mon_i, nmon_st;
+    bool *chosen = NULL;
+
+    /* First, we iterate over all monitors and check each monitor if
+     * it's not a duplicate. If it's okay, we mark it for use. After
+     * this loop, we know how many usable monitors there are, so we can
+     * allocate the "monitors" array. */
 
     moninf = XRRGetMonitors(dpy, root, True, &nmon);
-    if (nmon <= 0)
+    if (nmon <= 0 || moninf == NULL)
     {
         fprintf(stderr, __NAME__": No XRandR screens found\n");
         return false;
     }
+    nmon_st = nmon;
+
+    chosen = calloc(nmon_st, sizeof (bool));
+    if (chosen == NULL)
+    {
+        fprintf(stderr, __NAME__": Could not allocate memory for pointer "
+                "chosen\n");
+        XRRFreeMonitors(moninf);
+        return false;
+    }
+
+    for (num_mons = 0, i = 0; i < nmon_st; i++)
+    {
+        if (!read_monitors_is_duplicate(moninf, i, chosen, nmon_st))
+        {
+            chosen[i] = true;
+            num_mons++;
+        }
+    }
 
     /* Copy result to our own array because I'm not sure if we can work
      * freely on the array returned by the lib. */
-    num_mons = nmon;
     monitors = calloc(num_mons, sizeof (struct Monitor));
     if (monitors == NULL)
     {
         fprintf(stderr, __NAME__": Cannot allocate memory for 'monitors': ");
         perror(NULL);
+        XRRFreeMonitors(moninf);
         return false;
     }
-    for (i = 0; i < num_mons; i++)
+    for (mon_i = 0, i = 0; i < num_mons; i++)
     {
-        monitors[i].x = moninf[i].x;
-        monitors[i].y = moninf[i].y;
-        monitors[i].width = moninf[i].width;
-        monitors[i].height = moninf[i].height;
+        if (chosen[i])
+        {
+            monitors[mon_i].x = moninf[i].x;
+            monitors[mon_i].y = moninf[i].y;
+            monitors[mon_i].width = moninf[i].width;
+            monitors[mon_i].height = moninf[i].height;
+
+            mon_i++;
+        }
     }
     XRRFreeMonitors(moninf);
 
