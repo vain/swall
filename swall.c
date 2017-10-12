@@ -152,9 +152,10 @@ use_image_as_wallpaper(Imlib_Image image)
 }
 
 void
-compose(char **paths, bool single)
+compose(char **paths, size_t num_paths)
 {
-    int orig_w, orig_h, src_x, src_y, src_w, src_h;
+    int orig_w, orig_h, src_x, src_y, src_w, src_h, to_edge_x, to_edge_y;
+    unsigned int x, y;
     size_t i, path_i;
     double source_aspect, target_aspect;
     Imlib_Image image, canvas;
@@ -169,12 +170,6 @@ compose(char **paths, bool single)
 
     for (i = 0, path_i = 0; i < num_mons; i++)
     {
-        if (paths[path_i] == NULL)
-        {
-            fprintf(stderr, __NAME__": Not enough images\n");
-            goto free_canvas_and_leave;
-        }
-
         image = imlib_load_image(paths[path_i]);
         if (image == NULL)
         {
@@ -182,20 +177,52 @@ compose(char **paths, bool single)
             goto free_canvas_and_leave;
         }
 
+        printf(__NAME__": Monitor %zu uses image %zu: '%s' ", i, path_i,
+               paths[path_i]);
+
         imlib_context_set_image(image);
         orig_w = imlib_image_get_width();
         orig_h = imlib_image_get_height();
+        imlib_context_set_image(canvas);
 
         if ((unsigned int)orig_w == monitors[i].width &&
             (unsigned int)orig_h == monitors[i].height)
         {
-            printf(__NAME__": Exact size match of '%s' for monitor %zu\n",
-                   paths[path_i], i);
+            printf("(exact size match)\n");
 
             src_x = 0;
             src_y = 0;
             src_w = orig_w;
             src_h = orig_h;
+
+            imlib_blend_image_onto_image(image, 0,
+                                         src_x, src_y,
+                                         src_w, src_h,
+                                         monitors[i].x, monitors[i].y,
+                                         monitors[i].width, monitors[i].height);
+        }
+        else if ((unsigned int)orig_w < 0.6 * monitors[i].width &&
+                 (unsigned int)orig_h < 0.6 * monitors[i].height)
+        {
+            printf("(tiled)\n");
+
+            for (y = 0; y < monitors[i].height; y += orig_h)
+            {
+                for (x = 0; x < monitors[i].width; x += orig_w)
+                {
+                    to_edge_x = monitors[i].width - x;
+                    to_edge_y = monitors[i].height - y;
+
+                    src_w = to_edge_x >= orig_w ? orig_w : to_edge_x;
+                    src_h = to_edge_y >= orig_h ? orig_h : to_edge_y;
+
+                    imlib_blend_image_onto_image(image, 0,
+                                                 0, 0,
+                                                 src_w, src_h,
+                                                 monitors[i].x + x, monitors[i].y + y,
+                                                 src_w, src_h);
+                }
+            }
         }
         else
         {
@@ -221,8 +248,7 @@ compose(char **paths, bool single)
             if ((larger && source_aspect > target_aspect) ||
                 (!larger && source_aspect < target_aspect))
             {
-                printf(__NAME__": Using full height of '%s' for monitor %zu\n",
-                       paths[path_i], i);
+                printf("(fill area, use full height)\n");
 
                 src_y = 0;
                 src_h = orig_h;
@@ -232,8 +258,7 @@ compose(char **paths, bool single)
             }
             else
             {
-                printf(__NAME__": Using full width of '%s' for monitor %zu\n",
-                       paths[path_i], i);
+                printf("(fill area, use full width)\n");
 
                 src_x = 0;
                 src_w = orig_w;
@@ -241,20 +266,19 @@ compose(char **paths, bool single)
                 src_h = orig_w / target_aspect;
                 src_y = (orig_h - src_h) * 0.5;
             }
-        }
 
-        imlib_context_set_image(canvas);
-        imlib_blend_image_onto_image(image, 0,
-                                     src_x, src_y,
-                                     src_w, src_h,
-                                     monitors[i].x, monitors[i].y,
-                                     monitors[i].width, monitors[i].height);
+            imlib_blend_image_onto_image(image, 0,
+                                         src_x, src_y,
+                                         src_w, src_h,
+                                         monitors[i].x, monitors[i].y,
+                                         monitors[i].width, monitors[i].height);
+        }
 
         /* What an awkward API. */
         imlib_context_set_image(image);
         imlib_free_image();
 
-        if (!single)
+        if (path_i < num_paths - 1)
             path_i++;
     }
 
@@ -265,56 +289,18 @@ free_canvas_and_leave:
     imlib_free_image_and_decache();
 }
 
-bool
-tile(char *path)
-{
-    Imlib_Image image;
-    bool use_as_tile = true;
-    size_t i;
-
-    image = imlib_load_image(path);
-    if (image == NULL)
-    {
-        fprintf(stderr, __NAME__": Cannot load image '%s'\n", path);
-        use_as_tile = false;
-    }
-    else
-    {
-        imlib_context_set_image(image);
-
-        /* Try to find out if this image is probably suitable as a
-         * wallpaper tile. It is considered NOT suitable if it exceeds
-         * 70% of the size of the smallest monitor (x and y direction).
-         *
-         * A nice tile should be a rather small image, probably only
-         * about 10% the size of your monitor, tops. There are some
-         * larger tiles, though. 70% is a very high value, actually,
-         * maybe it should be reduced to, say, 30% to 50%. */
-        for (i = 0; use_as_tile && i < num_mons; i++)
-        {
-            if ((unsigned int)imlib_image_get_width() > 0.7 * monitors[i].width ||
-                (unsigned int)imlib_image_get_height() > 0.7 * monitors[i].height)
-            {
-                use_as_tile = false;
-            }
-        }
-
-        if (use_as_tile)
-        {
-            printf(__NAME__": Tiling '%s'\n", path);
-            use_image_as_wallpaper(image);
-        }
-        imlib_free_image();
-    }
-    return use_as_tile;
-}
-
 int
 main(int argc, char **argv)
 {
     Window dw;
     int screen, di;
     unsigned int dui;
+
+    if (argc < 2)
+    {
+        fprintf(stderr, __NAME__": Usage: %s <image> [<image>...]\n", argv[0]);
+        return 1;
+    }
 
     dpy = XOpenDisplay(NULL);
     if (!dpy)
@@ -333,17 +319,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    /* If only one image is specified, see if it's smaller than all of
-     * the monitors. If so, it will be used as a tile. If not, it will
-     * be scaled to each screen's size individually and used as a single
-     * wallpaper. */
-    if (argc == 2)
-    {
-        if (!tile(argv[1]))
-            compose(++argv, true);
-    }
-    else
-        compose(++argv, false);
+    compose(++argv, argc - 1);
 
     XFlush(dpy);
     XCloseDisplay(dpy);

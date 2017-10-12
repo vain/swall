@@ -35,23 +35,13 @@ swall assumes that it can directly alter the root window. In other
 words, it's not supported to use a separate program that manages a
 "desktop window".
 
-The program handles three common cases:
+Call the program with one or more images as arguments:
 
     $ swall tile.gif
-
-        If the image is smaller than your smallest monitor, it will be
-        used as a tile. To trigger tile mode, only one image must be
-        specified, and it will be used for all monitors.
-
     $ swall sparrows.png
-
-        If the image is at least as large as your smallest monitor, it
-        will be used as a wallpaper for each monitor. If necessary, will
-        be changed in size to achieve the monitor's aspect ratio. Only
-        one image must be specified to trigger this mode.
-
     $ swall left.png center.png right.png
 
-        If more than one image is specified, each monitor gets a
-        different wallpaper. If needed, image sizes will be reduced or
-        increased to achieve the monitor's aspect ratio.
+The first image goes to the first monitor, the second one to the second
+monitor, and so on. If an image is "small" (less than 60% of the
+monitor's size), then it will be tiled. Otherwise, it will be resized
+in an attempt to fill the monitor.

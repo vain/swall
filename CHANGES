@@ -1,5 +1,13 @@
 Release history for swall
 
+next
+  [Changed]
+  - We now decide on a per-monitor basis whether an image will be tiled
+    or scaled. This further simplifies the command line interface and
+    allows for different tiles per monitor.
+  - The threshold to detect tiles has been lowered to 60% of the
+    monitor's size.
+
 v17.10  2017-10-10
   - Initial release.
   - Set root wallpaper and handle the three most common cases.
