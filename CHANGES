@@ -7,6 +7,9 @@ next
     allows for different tiles per monitor.
   - The threshold to detect tiles has been lowered to 60% of the
     monitor's size.
+  - Images smaller than a monitor (but large enough not to be tiled)
+    will now be resized to fully cover that monitor's area. In other
+    words, there are no black bars anymore.
 
 v17.10  2017-10-10
   - Initial release.

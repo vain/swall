@@ -159,7 +159,6 @@ compose(char **paths, size_t num_paths)
     size_t i, path_i;
     double source_aspect, target_aspect;
     Imlib_Image image, canvas;
-    bool larger;
 
     canvas = imlib_create_image(root_w, root_h);
     if (canvas == NULL)
@@ -226,27 +225,10 @@ compose(char **paths, size_t num_paths)
         }
         else
         {
-            /* Fill this monitor as best as you can.
-             *
-             * For larger images, crop width or height and then resize
-             * to achieve the monitor's aspect ratio.
-             *
-             * Smaller images will be increased in size and black bars
-             * will be introduced to achieve the monitor's aspect ratio.
-             * This won't look pretty but it will look okay for images
-             * that are just slightly smaller than the monitor. */
-
-            if ((unsigned int)orig_w >= monitors[i].width &&
-                (unsigned int)orig_h >= monitors[i].height)
-                larger = true;
-            else
-                larger = false;
-
             source_aspect = (double)orig_w / orig_h;
             target_aspect = (double)monitors[i].width / monitors[i].height;
 
-            if ((larger && source_aspect > target_aspect) ||
-                (!larger && source_aspect < target_aspect))
+            if (source_aspect > target_aspect)
             {
                 printf("(fill area, use full height)\n");
 
