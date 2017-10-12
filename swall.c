@@ -167,6 +167,9 @@ compose(char **paths, size_t num_paths)
         return;
     }
 
+    /* Iterate over all monitors. First monitor gets the first image,
+     * second monitor the second one, and so on. Per monitor, decide
+     * whether to tile or fill. */
     for (i = 0, path_i = 0; i < num_mons; i++)
     {
         image = imlib_load_image(paths[path_i]);
@@ -256,7 +259,9 @@ compose(char **paths, size_t num_paths)
                                          monitors[i].width, monitors[i].height);
         }
 
-        /* What an awkward API. */
+        /* Freeing an image with this call still keeps it in an internal
+         * cache of imlib2. If we have to reload it in the next
+         * iteration, it'll be fast. */
         imlib_context_set_image(image);
         imlib_free_image();
 
