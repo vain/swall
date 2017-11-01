@@ -1,6 +1,6 @@
 Release history for swall
 
-next
+v17.11  2017-11-01
   [Changed]
   - We now decide on a per-monitor basis whether an image will be tiled
     or scaled. This further simplifies the command line interface and
